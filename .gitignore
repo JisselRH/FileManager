@@ -42,6 +42,12 @@ build/Release
 node_modules/
 jspm_packages/
 
+dist/
+temp/
+**/**/*.log
+config.js
+**/public/courses
+
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
 

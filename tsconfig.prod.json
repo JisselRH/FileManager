@@ -7,7 +7,7 @@
     "baseUrl": "./",
     "outDir": "temp",
     "esModuleInterop": true,                 
-    "skipLibCheck": true,                     
+    "skipLibCheck": false,                     
     "forceConsistentCasingInFileNames": true,
     "paths": {
       "@src/*": ["src/*"]

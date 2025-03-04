@@ -13,12 +13,12 @@ interface SaveFileParams {
 const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.mp4', '.mp3', '.pdf', '.doc', '.docx', '.zip', '.rar', '.7z'];
 
 const allowedTypes = [
-  "image/jpeg", "image/jpg", "image/png", "image/gif",
-  "video/mp4", "video/quicktime", "video/x-msvideo",
-  "audio/mpeg", "audio/wav",
-  "application/pdf",
-  "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed'
+  'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
+  'video/mp4', 'video/quicktime', 'video/x-msvideo',
+  'audio/mpeg', 'audio/wav',
+  'application/pdf',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed',
 ];
 
 const saveFile = async (params: SaveFileParams, mimeType: string): Promise<string> => {
@@ -55,29 +55,40 @@ const saveFile = async (params: SaveFileParams, mimeType: string): Promise<strin
 
   const filePath = path.join(tipoDir, fileName);
 
-  fs.writeFileSync(filePath, file);
+  await fs.promises.writeFile(filePath, file);
 
   return filePath;
 };
 
+/*interface UploadedFile extends Express.Multer.File {
+  buffer: Buffer;
+}*/
+
+interface UploadRequestBody {
+  courseId: string;
+  fileType: string;
+  fileName: string;
+}
+
 export const handleFileUpload = async (req: Request, res: Response): Promise<void> => {
 
-  const { courseId, fileType, fileName } = req.body;
-  const file = req.file?.buffer;
+  const body = req.body as UploadRequestBody;
+  const file = req.file!;
 
-  console.log()
+  if (!body || !file) {
+    res.status(400).send('Missing required parameters');
+    return;
+  }
 
-  let mimeType = "application/octet-stream";//se puede mejorar
+  const mimeType = file.mimetype || 'application/octet-stream';
 
-  if(req.file?.mimetype) mimeType = req.file.mimetype;
-
-  if (!courseId || !fileType || !fileName || !file) {
+  if (!body.courseId || !body.fileType || !body.fileName || !file.buffer) {
     res.status(400).send('Missing required parameters');
     return;
   }
 
   try {
-    const filePath = await saveFile({ courseId, fileType, fileName, file }, mimeType);
+    const filePath = await saveFile({ courseId: body.courseId, fileType: body.fileType, fileName: body.fileName, file: file.buffer }, mimeType);
     res.status(200).send(`File saved at ${filePath}`);
   } catch (error) {
     res.status(500).send('Error saving file ' + (error instanceof Error ? error.message : String(error)));

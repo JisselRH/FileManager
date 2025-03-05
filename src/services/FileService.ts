@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Request, Response } from 'express';
 import mime from 'mime-types';
+import sharp from 'sharp';
 
 interface SaveFileParams {
   courseId: string;
@@ -10,16 +11,30 @@ interface SaveFileParams {
   file: Buffer;
 }
 
-const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.mp4', '.mp3', '.pdf', '.doc', '.docx', '.zip', '.rar', '.7z'];
+const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.mp4', '.mkv', '.mp3', '.pdf', '.doc', '.docx', '.zip', '.rar', '.7z', '.csv'];
 
 const allowedTypes = [
   'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
-  'video/mp4', 'video/quicktime', 'video/x-msvideo',
+  'video/mp4', 'video/mkv', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska',
   'audio/mpeg', 'audio/wav',
-  'application/pdf',
+  'application/pdf', 'text/csv',
   'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed',
 ];
+
+const maxSize = {
+  image: 5 * 1024 * 1024, // 5MB
+  video: 30 * 1024 * 1024, // 30MB
+  other: 30 * 1024 * 1024, // 30MB
+};
+
+const resizeImage = async (buffer: Buffer): Promise<Buffer> => {
+  const metadata = await sharp(buffer).metadata();
+  if (metadata.width && metadata.height && (metadata.width > 1980 || metadata.height > 1980)) {
+    return sharp(buffer).resize({ width: 1980, height: 1980, fit: 'inside' }).toBuffer();
+  }
+  return buffer;
+};
 
 const saveFile = async (params: SaveFileParams, mimeType: string): Promise<string> => {
 
@@ -35,13 +50,20 @@ const saveFile = async (params: SaveFileParams, mimeType: string): Promise<strin
     throw new Error(`File type not allowed: ${mimeType}`);
   }
 
-  //Se verifica que el tipo MIME coincida con la extensión del archivo
   const expectedMimeType = mime.lookup(fileExtension);
   if (mimeType !== expectedMimeType) {
     throw new Error(`The MIME type does not match the file extension. Expected ${expectedMimeType}, but received ${mimeType}`);
   }
 
-  const baseDir = path.resolve(__dirname, '../public/courses');
+  if (mimeType.startsWith('image/') && file.length > maxSize.image) {
+    throw new Error('Image file exceeds 5MB limit');
+  } else if (mimeType.startsWith('video/') && file.length > maxSize.video) {
+    throw new Error('Video file exceeds 30MB limit');
+  } else if (file.length > maxSize.other) {
+    throw new Error('File exceeds 30MB limit');
+  }
+
+  const baseDir = path.resolve('/assets/courses');
 
   const cursoDir = path.join(baseDir, courseId);
   if (!fs.existsSync(cursoDir)) {
@@ -53,26 +75,22 @@ const saveFile = async (params: SaveFileParams, mimeType: string): Promise<strin
     fs.mkdirSync(tipoDir, { recursive: true });
   }
 
+  let finalFile = file;
+  if (mimeType.startsWith('image/')) {
+    finalFile = await resizeImage(file);
+  }
+
   const filePath = path.join(tipoDir, fileName);
 
-  await fs.promises.writeFile(filePath, file);
+  await fs.promises.writeFile(filePath, finalFile);
 
   return filePath;
+  
 };
-
-/*interface UploadedFile extends Express.Multer.File {
-  buffer: Buffer;
-}*/
-
-interface UploadRequestBody {
-  courseId: string;
-  fileType: string;
-  fileName: string;
-}
 
 export const handleFileUpload = async (req: Request, res: Response): Promise<void> => {
 
-  const body = req.body as UploadRequestBody;
+  const body = req.body as SaveFileParams;
   const file = req.file!;
 
   if (!body || !file) {
@@ -93,4 +111,5 @@ export const handleFileUpload = async (req: Request, res: Response): Promise<voi
   } catch (error) {
     res.status(500).send('Error saving file ' + (error instanceof Error ? error.message : String(error)));
   }
+
 };

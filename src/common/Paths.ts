@@ -1,9 +1,9 @@
 
 export default {
-  Base: '/api',
+  Base: '/',
 
   Files: {
-    Base: '/files',
+    Base: '/api/files',
     Upload: '/upload',
   },
   

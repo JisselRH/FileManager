@@ -36,6 +36,12 @@ Check for linting errors.
 
 Build the project for production.
 
+Luego de realizar la build se deben modificar las rutas en el directorio dist en los siguientes archivos:
+/index.js modificar @src/ por ./
+/server.js modificar @src/ por ./
+/common/route-errors.js modificar @src/ por ../
+/routes/common/index.js modificar @src/ por ../
+/routes/FileRoutes.js modificar @src/ por ../
 
 ### `npm start`
 

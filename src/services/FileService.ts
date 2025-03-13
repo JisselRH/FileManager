@@ -11,16 +11,20 @@ interface SaveFileParams {
   file: Buffer;
 }
 
-const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.mp4', '.mkv', '.mp3', '.pdf', '.doc', '.docx', '.zip', '.rar', '.7z', '.csv'];
+const validExtensions = [
+  '.jpg', '.jpeg', '.png', '.gif', '.webp',
+  '.mp4', '.mkv', '.mp3', '.pdf', '.doc', '.docx', '.zip', '.rar', '.7z', '.csv'
+];
 
 const allowedTypes = [
-  'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
+  'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
   'video/mp4', 'video/mkv', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska',
   'audio/mpeg', 'audio/wav',
   'application/pdf', 'text/csv',
   'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed',
 ];
+
 
 const maxSize = {
   image: 5 * 1024 * 1024, // 5MB
@@ -107,7 +111,10 @@ export const handleFileUpload = async (req: Request, res: Response): Promise<voi
 
   try {
     const filePath = await saveFile({ courseId: body.courseId, fileType: body.fileType, fileName: body.fileName, file: file.buffer }, mimeType);
-    res.status(200).send(`File saved at ${filePath}`);
+    const base = 'https://sophia-assets.wiloxagency.com/';
+    const dir = filePath.split("/assets/")
+    const urlFinal = base +dir[1];
+    res.status(200).send(`${urlFinal}`);
   } catch (error) {
     res.status(500).send('Error saving file ' + (error instanceof Error ? error.message : String(error)));
   }

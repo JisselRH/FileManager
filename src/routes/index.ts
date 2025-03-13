@@ -6,7 +6,7 @@ import fileRouter from './FileRoutes';
 const apiRouter = Router();
 
 apiRouter.get('/', (req, res) => {
-    res.status(200).send('Ok'); 
+  res.status(200).send('Ok'); 
 });
 
 // Add routers

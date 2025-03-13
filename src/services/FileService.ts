@@ -12,8 +12,8 @@ interface SaveFileParams {
 }
 
 const validExtensions = [
-  '.jpg', '.jpeg', '.png', '.gif', '.webp',
-  '.mp4', '.mkv', '.mp3', '.pdf', '.doc', '.docx', '.zip', '.rar', '.7z', '.csv'
+  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.mp4', '.mkv',
+  '.mp3', '.pdf', '.doc', '.docx', '.zip', '.rar', '.7z', '.csv',
 ];
 
 const allowedTypes = [
@@ -112,9 +112,9 @@ export const handleFileUpload = async (req: Request, res: Response): Promise<voi
   try {
     const filePath = await saveFile({ courseId: body.courseId, fileType: body.fileType, fileName: body.fileName, file: file.buffer }, mimeType);
     const base = 'https://sophia-assets.wiloxagency.com/';
-    const dir = filePath.split("/assets/")
+    const dir = filePath.split('/assets/');
     const urlFinal = base +dir[1];
-    res.status(200).send(`${urlFinal}`);
+    res.status(200).send(urlFinal);
   } catch (error) {
     res.status(500).send('Error saving file ' + (error instanceof Error ? error.message : String(error)));
   }

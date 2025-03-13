@@ -39,6 +39,7 @@ Build the project for production.
 Luego de realizar la build se deben modificar las rutas en el directorio dist en los siguientes archivos:
 /index.js modificar @src/ por ./
 /server.js modificar @src/ por ./
+    esta ruta cambiarla: const routes_1 = __importDefault(require("./routes"));
 /common/route-errors.js modificar @src/ por ../
 /routes/common/index.js modificar @src/ por ../
 /routes/FileRoutes.js modificar @src/ por ../

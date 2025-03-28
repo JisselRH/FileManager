@@ -12,7 +12,7 @@ interface SaveFileParams {
 }
 
 const validExtensions = [
-  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.mp4', '.mkv',
+  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.mp4', '.mkv', '.json',
   '.mp3', '.pdf', '.doc', '.docx', '.zip', '.rar', '.7z', '.csv',
 ];
 
@@ -23,6 +23,7 @@ const allowedTypes = [
   'application/pdf', 'text/csv',
   'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed',
+  'application/json',
 ];
 
 
@@ -68,8 +69,11 @@ const saveFile = async (params: SaveFileParams, mimeType: string): Promise<strin
   }
 
   const baseDir = path.resolve('/assets/courses');
-
   const cursoDir = path.join(baseDir, courseId);
+
+  //const fallbackDir = path.resolve('/assets/courses/files'); // Directorio por defecto
+  //const cursoDir = courseId ? path.join(baseDir, courseId) : fallbackDir;
+
   if (!fs.existsSync(cursoDir)) {
     fs.mkdirSync(cursoDir, { recursive: true });
   }

@@ -36,7 +36,8 @@ const resizeImage = async (buffer: Buffer): Promise<Buffer> => {
   try {
     const metadata = await sharp(buffer).metadata();
     if (metadata.width && metadata.height && (metadata.width > 1980 || metadata.height > 1980)) {
-      return sharp(buffer).resize({ width: 1980, height: 1980, fit: 'inside' }).toBuffer();
+     
+      return await sharp(buffer).resize({ width: 1980, height: 1980, fit: 'inside' }).toBuffer();
     }
     return buffer;
   } catch (error) {
@@ -73,9 +74,6 @@ const saveFile = async (params: SaveFileParams, mimeType: string): Promise<strin
   const baseDir = path.resolve('/assets/courses');
   const cursoDir = path.join(baseDir, courseId);
 
-  //const fallbackDir = path.resolve('/assets/courses/files'); // Directorio por defecto
-  //const cursoDir = courseId ? path.join(baseDir, courseId) : fallbackDir;
-
   if (!fs.existsSync(cursoDir)) {
     fs.mkdirSync(cursoDir, { recursive: true });
   }
@@ -106,18 +104,21 @@ export const handleFileUpload = async (req: Request, res: Response) => {
   const body = req.body as SaveFileParams;
   const file = req.file;
 
-  if (!body || !file || !file.buffer) {
-    return res.status(400).send('Missing required file or parameters');
+  if (!body || !file?.buffer) {
+    res.status(400).send('Missing required file or parameters');
+    return;
   }
 
   const { courseId, fileType, fileName } = body;
 
   if (!courseId || !fileType || !fileName) {
-    return res.status(400).send('Missing required body parameters');
+    res.status(400).send('Missing required body parameters');
+    return ;
   }
 
   if (!/^[a-zA-Z0-9_-]+$/.test(courseId)) {
-    return res.status(400).send('Invalid courseId format');
+    res.status(400).send('Invalid courseId format');
+    return;
   }
 
   const mimeType = file.mimetype || 'application/octet-stream';
@@ -139,7 +140,6 @@ export const handleFileUpload = async (req: Request, res: Response) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
 
-    // Errores conocidos (400 Bad Request)
     if (
       message.includes('not allowed') ||
       message.includes('exceeds') ||
@@ -147,10 +147,10 @@ export const handleFileUpload = async (req: Request, res: Response) => {
       message.includes('Invalid') ||
       message.includes('already exists')
     ) {
-      return res.status(400).send('Validation error: ' + message);
+      res.status(400).send('Validation error: ' + message);
+      return ;
     }
-
-    // Errores inesperados (500)
+    // eslint-disable-next-line no-console
     console.error(`[${new Date().toISOString()}] Error saving file:`, error);
     res.status(500).send('Unexpected error saving file');
   }

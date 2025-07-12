@@ -26,7 +26,6 @@ const allowedTypes = [
   'application/json',
 ];
 
-
 const maxSize = {
   image: 5 * 1024 * 1024, // 5MB
   video: 30 * 1024 * 1024, // 30MB
@@ -34,15 +33,18 @@ const maxSize = {
 };
 
 const resizeImage = async (buffer: Buffer): Promise<Buffer> => {
-  const metadata = await sharp(buffer).metadata();
-  if (metadata.width && metadata.height && (metadata.width > 1980 || metadata.height > 1980)) {
-    return sharp(buffer).resize({ width: 1980, height: 1980, fit: 'inside' }).toBuffer();
+  try {
+    const metadata = await sharp(buffer).metadata();
+    if (metadata.width && metadata.height && (metadata.width > 1980 || metadata.height > 1980)) {
+      return sharp(buffer).resize({ width: 1980, height: 1980, fit: 'inside' }).toBuffer();
+    }
+    return buffer;
+  } catch (error) {
+    throw new Error('Failed to process image: ' + (error instanceof Error ? error.message : String(error)));
   }
-  return buffer;
 };
 
 const saveFile = async (params: SaveFileParams, mimeType: string): Promise<string> => {
-
   const { courseId, fileType, fileName, file } = params;
 
   const fileExtension = path.extname(fileName).toLowerCase();
@@ -57,7 +59,7 @@ const saveFile = async (params: SaveFileParams, mimeType: string): Promise<strin
 
   const expectedMimeType = mime.lookup(fileExtension);
   if (mimeType !== expectedMimeType) {
-    throw new Error(`The MIME type does not match the file extension. Expected ${expectedMimeType}, but received ${mimeType}`);
+    throw new Error(`MIME type mismatch. Expected ${expectedMimeType}, received ${mimeType}`);
   }
 
   if (mimeType.startsWith('image/') && file.length > maxSize.image) {
@@ -83,44 +85,73 @@ const saveFile = async (params: SaveFileParams, mimeType: string): Promise<strin
     fs.mkdirSync(tipoDir, { recursive: true });
   }
 
+  const safeFileName = path.basename(fileName);
+  const filePath = path.join(tipoDir, safeFileName);
+
+  if (fs.existsSync(filePath)) {
+    throw new Error('File already exists. Please rename the file or delete the existing one.');
+  }
+
   let finalFile = file;
   if (mimeType.startsWith('image/')) {
     finalFile = await resizeImage(file);
   }
 
-  const filePath = path.join(tipoDir, fileName);
-
   await fs.promises.writeFile(filePath, finalFile);
 
   return filePath;
-  
 };
 
-export const handleFileUpload = async (req: Request, res: Response): Promise<void> => {
-
+export const handleFileUpload = async (req: Request, res: Response) => {
   const body = req.body as SaveFileParams;
-  const file = req.file!;
+  const file = req.file;
 
-  if (!body || !file) {
-    res.status(400).send('Missing required parameters');
-    return;
+  if (!body || !file || !file.buffer) {
+    return res.status(400).send('Missing required file or parameters');
+  }
+
+  const { courseId, fileType, fileName } = body;
+
+  if (!courseId || !fileType || !fileName) {
+    return res.status(400).send('Missing required body parameters');
+  }
+
+  if (!/^[a-zA-Z0-9_-]+$/.test(courseId)) {
+    return res.status(400).send('Invalid courseId format');
   }
 
   const mimeType = file.mimetype || 'application/octet-stream';
 
-  if (!body.courseId || !body.fileType || !body.fileName || !file.buffer) {
-    res.status(400).send('Missing required parameters');
-    return;
-  }
-
   try {
-    const filePath = await saveFile({ courseId: body.courseId, fileType: body.fileType, fileName: body.fileName, file: file.buffer }, mimeType);
+    const filePath = await saveFile({
+      courseId,
+      fileType,
+      fileName,
+      file: file.buffer,
+    }, mimeType);
+
     const base = 'https://sophia-assets.wiloxagency.com/';
     const dir = filePath.split('/assets/');
-    const urlFinal = base +dir[1];
-    res.status(200).send(urlFinal);
-  } catch (error) {
-    res.status(500).send('Error saving file ' + (error instanceof Error ? error.message : String(error)));
-  }
+    const urlFinal = base + dir[1];
 
+    res.status(200).send('urlFinal ' + urlFinal);
+
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+
+    // Errores conocidos (400 Bad Request)
+    if (
+      message.includes('not allowed') ||
+      message.includes('exceeds') ||
+      message.includes('mismatch') ||
+      message.includes('Invalid') ||
+      message.includes('already exists')
+    ) {
+      return res.status(400).send('Validation error: ' + message);
+    }
+
+    // Errores inesperados (500)
+    console.error(`[${new Date().toISOString()}] Error saving file:`, error);
+    res.status(500).send('Unexpected error saving file');
+  }
 };

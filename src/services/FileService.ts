@@ -135,7 +135,7 @@ export const handleFileUpload = async (req: Request, res: Response) => {
     const dir = filePath.split('/assets/');
     const urlFinal = base + dir[1];
 
-    res.status(200).send('urlFinal ' + urlFinal);
+    res.status(200).send(urlFinal);
 
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
